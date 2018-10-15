@@ -217,12 +217,24 @@ def configure_fabric(aws_node, node_config)
     #aws_node.vm.provision 'shell', inline: "docker tag hyperledger/fabric-#{role}:x86_64-#{HYPERLEDGER_VERSION} hyperledger/fabric-#{role}"
     aws_node.vm.provision 'shell', inline: "docker tag hyperledger/fabric-#{role}:#{HYPERLEDGER_VERSION} hyperledger/fabric-#{role}"
 
+#    # wait until network is up
+#    aws_node.vm.provision 'shell', inline: WAIT_FOR_NETWORK
+
+#    docker_compose_file_name = "/vagrant/docker/#{docker_yaml}"
+#    aws_node.vm.provision :docker_compose, yml: docker_compose_file_name, options: '', compose_version: DOCKER_COMPOSE_VERSION
+  end
+  
+  node_config['fabric'].each do |fabric|
+    role = fabric['role']
+    docker_yaml = fabric['docker']
+ 
     # wait until network is up
     aws_node.vm.provision 'shell', inline: WAIT_FOR_NETWORK
-
+ 
     docker_compose_file_name = "/vagrant/docker/#{docker_yaml}"
     aws_node.vm.provision :docker_compose, yml: docker_compose_file_name, options: '', compose_version: DOCKER_COMPOSE_VERSION
-  end
+ 
+  end  
 end
 
 def configure_ssh(aws_node)
