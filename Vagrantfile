@@ -50,12 +50,12 @@ PRIVATE_KEY_PATH = AWS_CFG['private_key_path'].freeze
 
 GEN_PATH = ENV['GEN_PATH'].freeze
 SHARED_PATH = "#{INSTALL_DIR}/shared/".freeze
-HYPERLEDGER_VERSION = '1.1.0'.freeze
+HYPERLEDGER_VERSION = '1.3.0'.freeze
 DOCKER0_IP_ADDRESS = '172.17.0.1'.freeze
 CONSUL_MASTER_IP = AWS_CFG['consul_master_ip'].freeze
 
 DOCKER_COMPOSE_VERSION = '1.17.0'.freeze
-CONSUL_VERSION = '1.0.0'.freeze
+CONSUL_VERSION = '1.3.0'.freeze
 
 CMD_GET_PUBLIC_IP = 'dig +short myip.opendns.com @resolver1.opendns.com'.freeze
 
@@ -165,6 +165,7 @@ def configure_consul(aws_node, node_name, private_ip_address)
     is_consul_master = private_ip_address == CONSUL_MASTER_IP
     d.pull_images "consul:#{CONSUL_VERSION}"
     d.post_install_provision 'shell', inline: get_docker_daemon_cmd(private_ip_address, !is_consul_master)
+#    aws_node.vm.provision 'shell', inline: "echo \"52.70.175.131   registry-1.docker.io\" >> /etc/hosts"
     if is_consul_master
       # Assume there is only one consul master
       d.run 'consul', args: docker_consul_args + " -h consul_master_#{node_name}", cmd: consul_cmd + ' -bootstrap -ui'
@@ -173,6 +174,8 @@ def configure_consul(aws_node, node_name, private_ip_address)
     else
       d.run 'consul', args: docker_consul_args + " -h consul_#{node_name}", cmd: consul_cmd + " -join #{CONSUL_MASTER_IP}"
     end
+
+#    aws_node.vm.provision 'shell', inline: "sleep 10; export GODEBUG=netdns=cgo; service docker restart; echo 'restarted docker daemon'"
   end
 end
 
@@ -188,7 +191,8 @@ def configure_fabric(aws_node, node_config)
     docker_yaml = fabric['docker']
     couchdb_port = fabric['couchdb_port']
     aws_node.vm.provision 'docker' do |d|
-      d.pull_images "hyperledger/fabric-#{role}:x86_64-#{HYPERLEDGER_VERSION}"
+      #d.pull_images "hyperledger/fabric-#{role}:x86_64-#{HYPERLEDGER_VERSION}"
+      d.pull_images "hyperledger/fabric-#{role}:#{HYPERLEDGER_VERSION}"
       if role == 'peer'
         # Download and run couchdb
         d.pull_images 'yeasy/hyperledger-fabric-couchdb'
@@ -197,18 +201,21 @@ def configure_fabric(aws_node, node_config)
         # and peer containers should link to couchdb
         d.run 'yeasy/hyperledger-fabric-couchdb', args: "-e COUCHDB_PASSWORD=password -e COUCHDB_USER=admin -p #{couchdb_port}:5984"
         # Pre-load fabric image for chaincode instantiation
-        d.pull_images "hyperledger/fabric-ccenv:x86_64-#{HYPERLEDGER_VERSION}"
+        #d.pull_images "hyperledger/fabric-ccenv:x86_64-#{HYPERLEDGER_VERSION}"
+        d.pull_images "hyperledger/fabric-ccenv:#{HYPERLEDGER_VERSION}"
       end
     end
 
     if role == 'peer'
-      aws_node.vm.provision 'shell', inline: "docker tag hyperledger/fabric-ccenv:x86_64-#{HYPERLEDGER_VERSION} hyperledger/fabric-ccenv"
+#      aws_node.vm.provision 'shell', inline: "docker tag hyperledger/fabric-ccenv:x86_64-#{HYPERLEDGER_VERSION} hyperledger/fabric-ccenv"
+      aws_node.vm.provision 'shell', inline: "docker tag hyperledger/fabric-ccenv:#{HYPERLEDGER_VERSION} hyperledger/fabric-ccenv"
       # wait for couchdb
       aws_node.vm.provision 'shell', inline: wait_for_port('0.0.0.0', couchdb_port)
     end
 
     # Remove version tag on the image by tagging it
-    aws_node.vm.provision 'shell', inline: "docker tag hyperledger/fabric-#{role}:x86_64-#{HYPERLEDGER_VERSION} hyperledger/fabric-#{role}"
+    #aws_node.vm.provision 'shell', inline: "docker tag hyperledger/fabric-#{role}:x86_64-#{HYPERLEDGER_VERSION} hyperledger/fabric-#{role}"
+    aws_node.vm.provision 'shell', inline: "docker tag hyperledger/fabric-#{role}:#{HYPERLEDGER_VERSION} hyperledger/fabric-#{role}"
 
     # wait until network is up
     aws_node.vm.provision 'shell', inline: WAIT_FOR_NETWORK

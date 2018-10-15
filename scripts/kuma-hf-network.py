@@ -15,7 +15,7 @@ from argparse import Namespace
 from argparse import Action
 
 install_script = "https://raw.githubusercontent.com/Kunstmaan/hyperledger-fabric-network-setup/master/scripts/install.sh?token=AG6ftlJwD7jEr7kZph_QEsqncTTeroBFks5aZc1pwA%3D%3D"
-DEBUG = False
+DEBUG = True
 PWD = os.path.dirname(os.path.realpath(__file__))
 
 def to_pwd(script):
@@ -30,7 +30,7 @@ def fail(msg):
 def call(script, *args):
     """Calls the given script using the args"""
 
-    cmd = script + " " + " ".join(args)
+    cmd = "/bin/bash -c \"" + (script + " " + " ".join(args)) + "\""
     if DEBUG:
         print cmd
     if os.system(cmd) != 0:
