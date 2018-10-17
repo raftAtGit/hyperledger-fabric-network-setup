@@ -3,3 +3,4 @@
 .HLVersion
 **/pki
 generated
+.vscode/

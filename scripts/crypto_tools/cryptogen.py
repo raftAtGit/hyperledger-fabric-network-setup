@@ -130,31 +130,31 @@ def to_domain(pre, org):
     """Appends pre to org to create a domain name"""
     return pre + "." + org["Domain"]
 
-def create_peer_docker(peer, org):
+def create_peer_docker(org, peerName):
     """Creates a docker compose file for this peer"""
-
     # Create peer docker
+    print 'Generating peer Docker for org: {0}, peer: {1}'.format(org["Name"], peerName)
     call(
         to_pwd("docker_peer.sh"),
-        peer["Hostname"],
+        peerName,
         org["Domain"],
-        convert_to_msp_id(org["Domain"]),
-        ",".join(peer["Ports"]),
-        str(peer["CouchdbPort"]),
+        get_msp_id(org),
+        "7051:7051,7053:7053", # TODO ports
+        "5984"
         )
 
-    if "Tools" in peer:
-        call(to_pwd("docker_tools.sh"), org["Domain"], peer["Tools"])
+    # if "Tools" in peer:
+    #     call(to_pwd("docker_tools.sh"), org["Domain"], peer["Tools"])
 
-    call(
-        to_pwd("create_peer_env.sh"),
-        peer["Hostname"],
-        peer["Ports"][0].split(":")[0],
-        org["Domain"],
-        convert_to_msp_id(org["Domain"]),
-        org["admins"][0]["Hostname"],
-        CRYPTO_CONFIG_PATH + org["Domain"]
-    )
+    # call(
+    #     to_pwd("create_peer_env.sh"),
+    #     peer["Hostname"],
+    #     peer["Ports"][0].split(":")[0],
+    #     org["Domain"],
+    #     convert_to_msp_id(org["Domain"]),
+    #     org["admins"][0]["Hostname"],
+    #     CRYPTO_CONFIG_PATH + org["Domain"]
+    # )
 
 def get_org_nb(org):
     global ORG_MAP
@@ -216,21 +216,30 @@ def add_peer_to_explorer(org, peer, is_dev = False):
 def create_orderer_docker(orderer, org):
     """Creates a docker compose file for this orderer"""
     # Create orderers docker
-    peer_cn = []
-    peer_orgs = []
-    for peer in orderer["Peers"]:
-        peer_cn.append(peer["Hostname"])
-        peer_orgs.append(peer["Org"])
-
+    print 'Generating orderer Docker for org: {0}, domain: {1}, host: {2}'.format(org["Name"], org["Domain"], orderer['Hostname'])
     call(
-        to_pwd("docker_orderer.sh"),
-        orderer["Hostname"],
-        org["Domain"],
-        convert_to_msp_id(org["Domain"]),
-        ",".join(peer_cn),
-        ",".join(peer_orgs),
-        str(orderer["Port"])
+        to_pwd("docker_orderer_2.sh"),
+        orderer['Hostname'],
+        org['Domain'],
+        get_msp_id(org),
+        "7050"
         )
+    
+    # peer_cn = []
+    # peer_orgs = []
+    # for peer in orderer["Peers"]:
+    #     peer_cn.append(peer["Hostname"])
+    #     peer_orgs.append(peer["Org"])
+
+    # call(
+    #     to_pwd("docker_orderer.sh"),
+    #     orderer["Hostname"],
+    #     org["Domain"],
+    #     convert_to_msp_id(org["Domain"]),
+    #     ",".join(peer_cn),
+    #     ",".join(peer_orgs),
+    #     str(orderer["Port"])
+    #     )
 
 def create_docker(role, component, org):
     """Creates docker files for the given role"""
@@ -331,6 +340,15 @@ def create_all_msp(org):
                 create_ca({'Parent':org["ca"], 'Domain':org["Domain"]}, is_tls=False, can_sign=False, subfolder=subfolder, attributes=attributes, is_admin=is_admin)
                 create_ca({'Parent':org["tlsca"], 'Domain':org["Domain"]}, is_tls=True, can_sign=False, subfolder=subfolder, attributes=attributes, is_admin=is_admin)
 
+def create_org_dockers(org):
+    count = org['Template']['Count']
+    for i in range(0, count):
+        create_peer_docker(org, "peer" + str(i))
+                
+def create_orderer_dockers(org):
+    for orderer in org["Specs"]:
+        create_orderer_docker(orderer, org)
+
 def getSuffix(domain, subfolder):
     if subfolder == "":
         return domain
@@ -402,8 +420,12 @@ def create_ca(caconf, is_tls=False, subfolder="", docker=False, can_sign=False, 
     else:
         create_msp(caconf["Domain"], ca_paths, is_tls, subfolder, is_admin)
 
-def convert_to_msp_id(domain):
-    return ''.join(part.capitalize() for part in domain.split('.')) + "MSP"
+# def convert_to_msp_id(domain):
+#     return ''.join(part.capitalize() for part in domain.split('.')) + "MSP"
+
+def get_msp_id(org):
+    return org['Name'] + "_MSP"
+    
 
 if args.user:
     print 'generating user {0} for {1}'.format(args.name, args.org)
@@ -438,52 +460,60 @@ else:
             CRYPTO_CONFIG_PATH = GEN_PATH + "/crypto-config/"
 
             call("mkdir -p", CRYPTO_CONFIG_PATH)
-            print CONF["PREGEN_CAs"]
-            for init_ca in CONF["PREGEN_CAs"]:
-                create_ca(init_ca["ca"], is_tls=False, docker=True, can_sign=True)
-                ca_path = CRYPTO_CONFIG_PATH + init_ca["ca"]["Domain"]
-                if OVERRIDE or not os.path.isdir(ca_path + '/tlsca'):
-                    call('rm -rfd ', ca_path + '/tlsca')
-                    call("cp -r", ca_path + "/ca", ca_path + "/tlsca")
-                    call("mv", ca_path + "/tlsca/ca." + init_ca["ca"]["Domain"] + "-cert.pem",
-                        ca_path + "/tlsca/tlsca." + init_ca["ca"]["Domain"] + "-cert.pem"
-                        )
+            call("cryptogen generate --config=" + YAML_CONFIG + " --output=" + CRYPTO_CONFIG_PATH)
 
-                    call("mv", ca_path + "/tlsca/ca." + init_ca["ca"]["Domain"] + "-key.pem",
-                        ca_path + "/tlsca/tlsca." + init_ca["ca"]["Domain"] + "-key.pem"
-                        )
-                    create_combined_ca(init_ca["ca"], is_tls=True)
+            for theOrg in CONF["OrdererOrgs"]:
+                create_orderer_dockers(theOrg)
 
-            for theOrg in CONF["Orgs"]:
-                if 'peers' in theOrg and theOrg['peers']:
-                    ORG_MAP['currentId'] += 1
-                    ORG_MAP[theOrg["Domain"]] = {
-                        'id': ORG_MAP['currentId'],
-                        'peers': {
-                            'currentId': 0
-                        }
-                    }
-                    EXPLORER_DATA_PROD['network-config'][get_org_nb(theOrg)] = {}
-                create_all_msp(theOrg)
+            for theOrg in CONF["PeerOrgs"]:
+                create_org_dockers(theOrg)
 
-            if ORG_MSP_CHANGED:
-                print 'Generating channel artifacts...'
+            # print CONF["PREGEN_CAs"]
+            # for init_ca in CONF["PREGEN_CAs"]:
+            #     create_ca(init_ca["ca"], is_tls=False, docker=True, can_sign=True)
+            #     ca_path = CRYPTO_CONFIG_PATH + init_ca["ca"]["Domain"]
+            #     if OVERRIDE or not os.path.isdir(ca_path + '/tlsca'):
+            #         call('rm -rfd ', ca_path + '/tlsca')
+            #         call("cp -r", ca_path + "/ca", ca_path + "/tlsca")
+            #         call("mv", ca_path + "/tlsca/ca." + init_ca["ca"]["Domain"] + "-cert.pem",
+            #             ca_path + "/tlsca/tlsca." + init_ca["ca"]["Domain"] + "-cert.pem"
+            #             )
 
-                call(to_pwd('../fabric_artifacts/gen_configtx.py'), YAML_CONFIG, CONFIGTX_BASE)
-                call('mkdir -p', GEN_PATH + '/scripts')
-                with open(GEN_PATH + '/scripts/explorer-config.prod.json', 'w+') as stream:
-                    EXPLORER_DATA_PROD['channel'] = CONF['Channels'][0]['Name']
-                    stream.write(json.dumps(EXPLORER_DATA_PROD,sort_keys=True,indent=2))
-                with open(GEN_PATH + '/scripts/explorer-config.dev.json', 'w+') as stream:
-                    dev_org = CONF['Devmode']
-                    EXPLORER_DATA_DEV['channel'] = CONF['Channels'][0]['Name']
-                    EXPLORER_DATA_DEV['network-config']['org1'] = {}
-                    add_admin_to_explorer(dev_org, dev_org['admins'][0], True)
-                    add_peer_to_explorer(dev_org, dev_org['peers'][0], True)
+            #         call("mv", ca_path + "/tlsca/ca." + init_ca["ca"]["Domain"] + "-key.pem",
+            #             ca_path + "/tlsca/tlsca." + init_ca["ca"]["Domain"] + "-key.pem"
+            #             )
+            #         create_combined_ca(init_ca["ca"], is_tls=True)
 
-                    stream.write(json.dumps(EXPLORER_DATA_DEV,sort_keys=True,indent=2))
-            else:
-                print "Organisation MSP did not change, not regenerating channel artifacts"
+            # for theOrg in CONF["Orgs"]:
+            #     if 'peers' in theOrg and theOrg['peers']:
+            #         ORG_MAP['currentId'] += 1
+            #         ORG_MAP[theOrg["Domain"]] = {
+            #             'id': ORG_MAP['currentId'],
+            #             'peers': {
+            #                 'currentId': 0
+            #             }
+            #         }
+            #         EXPLORER_DATA_PROD['network-config'][get_org_nb(theOrg)] = {}
+            #     create_all_msp(theOrg)
+
+            # if ORG_MSP_CHANGED:
+            #     print 'Generating channel artifacts...'
+
+            #     call(to_pwd('../fabric_artifacts/gen_configtx.py'), YAML_CONFIG, CONFIGTX_BASE)
+            #     call('mkdir -p', GEN_PATH + '/scripts')
+            #     with open(GEN_PATH + '/scripts/explorer-config.prod.json', 'w+') as stream:
+            #         EXPLORER_DATA_PROD['channel'] = CONF['Channels'][0]['Name']
+            #         stream.write(json.dumps(EXPLORER_DATA_PROD,sort_keys=True,indent=2))
+            #     with open(GEN_PATH + '/scripts/explorer-config.dev.json', 'w+') as stream:
+            #         dev_org = CONF['Devmode']
+            #         EXPLORER_DATA_DEV['channel'] = CONF['Channels'][0]['Name']
+            #         EXPLORER_DATA_DEV['network-config']['org1'] = {}
+            #         add_admin_to_explorer(dev_org, dev_org['admins'][0], True)
+            #         add_peer_to_explorer(dev_org, dev_org['peers'][0], True)
+
+            #         stream.write(json.dumps(EXPLORER_DATA_DEV,sort_keys=True,indent=2))
+            # else:
+            #     print "Organisation MSP did not change, not regenerating channel artifacts"
 
         except yaml.YAMLError as exc:
             print exc
