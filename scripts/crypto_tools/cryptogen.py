@@ -143,9 +143,6 @@ def create_peer_docker(org, peerName):
         "5984"
         )
 
-    # if "Tools" in peer:
-    #     call(to_pwd("docker_tools.sh"), org["Domain"], peer["Tools"])
-
     # call(
     #     to_pwd("create_peer_env.sh"),
     #     peer["Hostname"],
@@ -343,7 +340,23 @@ def create_all_msp(org):
 def create_org_dockers(org):
     count = org['Template']['Count']
     for i in range(0, count):
-        create_peer_docker(org, "peer" + str(i))
+        # create_peer_docker(org, "peer" + str(i))
+        peerName = "peer" + str(i)
+        print 'Generating peer Docker for org: {0}, peer: {1}'.format(org["Name"], peerName)
+        call(
+            to_pwd("docker_peer.sh"),
+            peerName,
+            org["Domain"],
+            get_msp_id(org),
+            "7051:7051,7053:7053", # TODO ports
+            "5984"
+            )
+        
+    if "PI" in org and "Tools" in org["PI"]:
+        peer = org["PI"]["Tools"]
+        print 'Generating tools Docker for org: {0}, peer: {1}'.format(org["Name"], peer)
+        call(to_pwd("docker_tools.sh"), org["Domain"], peer, get_msp_id(org))
+        
                 
 def create_orderer_dockers(org):
     for orderer in org["Specs"]:
@@ -468,9 +481,9 @@ else:
             for theOrg in CONF["PeerOrgs"]:
                 create_org_dockers(theOrg)
 
-            print 'Generating channel artifacts...'
-
+            # print 'Generating channel artifacts...'
             # call(to_pwd('../fabric_artifacts/gen_configtx.py'), YAML_CONFIG, CONFIGTX_BASE)
+
 
             # call('mkdir -p', GEN_PATH + '/scripts')
             # with open(GEN_PATH + '/scripts/explorer-config.prod.json', 'w+') as stream:
