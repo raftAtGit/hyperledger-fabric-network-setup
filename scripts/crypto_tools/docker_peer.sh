@@ -36,7 +36,7 @@ services:
     container_name: $CN.$ORG
     working_dir:  /opt/gopath/src/github.com/hyperledger/fabric/peer
     command:      peer node start
-    logging:
+#    logging:
 #        driver: \"json-file\"
 #        options:
 #            max-size: \"200k\"

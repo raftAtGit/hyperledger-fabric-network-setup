@@ -39,7 +39,7 @@ services:
     command: orderer
     ports:
       - $Port:7050
-    logging:
+#    logging:
 #      driver: \"json-file\"
 #      options:
 #        max-size: \"200k\"

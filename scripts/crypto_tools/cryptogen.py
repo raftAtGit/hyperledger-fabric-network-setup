@@ -468,6 +468,25 @@ else:
             for theOrg in CONF["PeerOrgs"]:
                 create_org_dockers(theOrg)
 
+            print 'Generating channel artifacts...'
+
+            # call(to_pwd('../fabric_artifacts/gen_configtx.py'), YAML_CONFIG, CONFIGTX_BASE)
+
+            # call('mkdir -p', GEN_PATH + '/scripts')
+            # with open(GEN_PATH + '/scripts/explorer-config.prod.json', 'w+') as stream:
+            #     EXPLORER_DATA_PROD['channel'] = CONF['Channels'][0]['Name']
+            #     stream.write(json.dumps(EXPLORER_DATA_PROD,sort_keys=True,indent=2))
+            # with open(GEN_PATH + '/scripts/explorer-config.dev.json', 'w+') as stream:
+            #     dev_org = CONF['Devmode']
+            #     EXPLORER_DATA_DEV['channel'] = CONF['Channels'][0]['Name']
+            #     EXPLORER_DATA_DEV['network-config']['org1'] = {}
+            #     add_admin_to_explorer(dev_org, dev_org['admins'][0], True)
+            #     add_peer_to_explorer(dev_org, dev_org['peers'][0], True)
+
+            #     stream.write(json.dumps(EXPLORER_DATA_DEV,sort_keys=True,indent=2))
+
+#-------------------------
+
             # print CONF["PREGEN_CAs"]
             # for init_ca in CONF["PREGEN_CAs"]:
             #     create_ca(init_ca["ca"], is_tls=False, docker=True, can_sign=True)
