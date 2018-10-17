@@ -58,7 +58,7 @@ services:
       - ORDERER_GENERAL_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
       - ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
     volumes:
-    - /vagrant/channel/genesis.block:/var/hyperledger/orderer/orderer.genesis.block
+    - /vagrant/channel-artifacts/genesis.block:/var/hyperledger/orderer/orderer.genesis.block
     - /vagrant/crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/msp:/var/hyperledger/orderer/msp
     - /vagrant/crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/tls/:/var/hyperledger/orderer/tls
     - $CN.$ORG:/var/hyperledger/production/orderer

@@ -471,9 +471,19 @@ else:
         try:
             CONF = yaml.load(stream)
             CRYPTO_CONFIG_PATH = GEN_PATH + "/crypto-config/"
+            CHANNEL_PATH = GEN_PATH + "/channel-artifacts/"
 
+            print "Generating crypto material with cryptogen"
             call("mkdir -p", CRYPTO_CONFIG_PATH)
             call("cryptogen generate --config=" + YAML_CONFIG + " --output=" + CRYPTO_CONFIG_PATH)
+
+            print "Generating genesis block with configtxgen"
+            call("mkdir -p", CHANNEL_PATH)
+            call("cp configuration/configtx.yaml " + GEN_PATH)
+            call("export FABRIC_CFG_PATH=" + GEN_PATH + " && configtxgen -profile TwoOrgsOrdererGenesis -outputBlock " + CHANNEL_PATH + "genesis.block")
+
+
+            call("export FABRIC_CFG_PATH=" + GEN_PATH + " && export CHANNEL_NAME=mychannel  && configtxgen -profile TwoOrgsChannel -outputCreateChannelTx " + CHANNEL_PATH + "/channel.tx -channelID $CHANNEL_NAME")
 
             for theOrg in CONF["OrdererOrgs"]:
                 create_orderer_dockers(theOrg)

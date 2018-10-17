@@ -184,7 +184,7 @@ end
 # +aws_node+:: aws node configuration
 # +node_config+:: json node configuration
 def configure_fabric(aws_node, node_config)
-  aws_node.vm.synced_folder "#{GEN_PATH}/channel/", '/vagrant/channel', type: 'rsync'
+  aws_node.vm.synced_folder "#{GEN_PATH}/channel-artifacts/", '/vagrant/channel-artifacts', type: 'rsync'
   aws_node.vm.synced_folder "#{GEN_PATH}/crypto-config/", '/vagrant/crypto-config', type: 'rsync'
   node_config['fabric'].each do |fabric|
     role = fabric['role']

@@ -59,12 +59,12 @@ services:
         - /vagrant/chaincode/:/opt/gopath/src/github.com/chaincode
         - /vagrant/crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/
         # - ./scripts:/opt/gopath/src/github.com/hyperledger/fabric/peer/scripts/
-        - /vagrant/channel:/opt/gopath/src/github.com/hyperledger/fabric/peer/channel-artifacts
+        - /vagrant/channel-artifacts:/opt/gopath/src/github.com/hyperledger/fabric/peer/channel-artifacts
 
       # - /vagrant/channel/:/etc/hyperledger/configtx
       # - /vagrant/crypto-config/:/etc/hyperledger/crypto-config/
       # - /vagrant/shared/:/etc/hyperledger/
-      - /vagrant/ssh/:/root/.ssh/
+        - /vagrant/ssh/:/root/.ssh/
 
 networks:
   default:
