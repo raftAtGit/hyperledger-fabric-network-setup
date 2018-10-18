@@ -55,7 +55,7 @@ def call(script, *args):
 def get_container_name(yaml_file):
     """Returns the container name of the yaml_file docker compose file"""
     docker_path = GEN_PATH + "/docker/"
-    with open(docker_path + yaml_file, 'r') as stream:
+    with open(docker_path + yaml_file + ".yaml", 'r') as stream:
         try:
             conf = yaml.load(stream)
             return conf['services'].keys()[0]
