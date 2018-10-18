@@ -191,7 +191,6 @@ def configure_fabric(aws_node, node_config)
     docker_yaml = fabric['docker']
     couchdb_port = fabric['couchdb_port']
     aws_node.vm.provision 'docker' do |d|
-      #d.pull_images "hyperledger/fabric-#{role}:x86_64-#{HYPERLEDGER_VERSION}"
       d.pull_images "hyperledger/fabric-#{role}:#{HYPERLEDGER_VERSION}"
       if role == 'peer'
         # Download and run couchdb
@@ -199,22 +198,19 @@ def configure_fabric(aws_node, node_config)
         # TODO: In future, couchdb should not publish port
         # but only expose them for incresed security,
         # and peer containers should link to couchdb
-        d.run 'hyperledger/fabric-couchdb', args: "-e COUCHDB_PASSWORD=password -e COUCHDB_USER=admin -p #{couchdb_port}:5984"
+        d.run 'hyperledger/fabric-couchdb', args: "--name couchdb-#{docker_yaml}  -e COUCHDB_USER=admin -e COUCHDB_PASSWORD=pivt -p #{couchdb_port}:5984"
         # Pre-load fabric image for chaincode instantiation
-        #d.pull_images "hyperledger/fabric-ccenv:x86_64-#{HYPERLEDGER_VERSION}"
         d.pull_images "hyperledger/fabric-ccenv:#{HYPERLEDGER_VERSION}"
       end
     end
 
     if role == 'peer'
-#      aws_node.vm.provision 'shell', inline: "docker tag hyperledger/fabric-ccenv:x86_64-#{HYPERLEDGER_VERSION} hyperledger/fabric-ccenv"
       aws_node.vm.provision 'shell', inline: "docker tag hyperledger/fabric-ccenv:#{HYPERLEDGER_VERSION} hyperledger/fabric-ccenv"
       # wait for couchdb
       aws_node.vm.provision 'shell', inline: wait_for_port('0.0.0.0', couchdb_port)
     end
 
     # Remove version tag on the image by tagging it
-    #aws_node.vm.provision 'shell', inline: "docker tag hyperledger/fabric-#{role}:x86_64-#{HYPERLEDGER_VERSION} hyperledger/fabric-#{role}"
     aws_node.vm.provision 'shell', inline: "docker tag hyperledger/fabric-#{role}:#{HYPERLEDGER_VERSION} hyperledger/fabric-#{role}"
 
 #    # wait until network is up
@@ -232,8 +228,13 @@ def configure_fabric(aws_node, node_config)
  
     # wait until network is up
     aws_node.vm.provision 'shell', inline: WAIT_FOR_NETWORK
+
+    if role == 'peer'
+      #TODO nasty workaround for now
+      aws_node.vm.provision 'shell', inline: 'docker network connect hyperledgerNet couchdb-' + docker_yaml
+    end
  
-    docker_compose_file_name = "/vagrant/docker/#{docker_yaml}"
+    docker_compose_file_name = "/vagrant/docker/#{docker_yaml}.yaml"
     aws_node.vm.provision :docker_compose, yml: docker_compose_file_name, options: '', compose_version: DOCKER_COMPOSE_VERSION
  
   end  
