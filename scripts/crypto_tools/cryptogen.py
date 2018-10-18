@@ -437,7 +437,7 @@ def create_ca(caconf, is_tls=False, subfolder="", docker=False, can_sign=False, 
 #     return ''.join(part.capitalize() for part in domain.split('.')) + "MSP"
 
 def get_msp_id(org):
-    return org['Name'] + "_MSP"
+    return org['Name'] + "MSP"
     
 
 if args.user:
@@ -482,7 +482,7 @@ else:
             call("cp configuration/configtx.yaml " + GEN_PATH)
             call("export FABRIC_CFG_PATH=" + GEN_PATH + " && configtxgen -profile TwoOrgsOrdererGenesis -outputBlock " + CHANNEL_PATH + "genesis.block")
 
-
+            print "Generating channel transction with configtxgen"
             call("export FABRIC_CFG_PATH=" + GEN_PATH + " && export CHANNEL_NAME=mychannel  && configtxgen -profile TwoOrgsChannel -outputCreateChannelTx " + CHANNEL_PATH + "/channel.tx -channelID $CHANNEL_NAME")
 
             for theOrg in CONF["OrdererOrgs"]:
