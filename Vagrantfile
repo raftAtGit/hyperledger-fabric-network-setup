@@ -195,11 +195,11 @@ def configure_fabric(aws_node, node_config)
       d.pull_images "hyperledger/fabric-#{role}:#{HYPERLEDGER_VERSION}"
       if role == 'peer'
         # Download and run couchdb
-        d.pull_images 'yeasy/hyperledger-fabric-couchdb'
+        d.pull_images 'hyperledger/fabric-couchdb'
         # TODO: In future, couchdb should not publish port
         # but only expose them for incresed security,
         # and peer containers should link to couchdb
-        d.run 'yeasy/hyperledger-fabric-couchdb', args: "-e COUCHDB_PASSWORD=password -e COUCHDB_USER=admin -p #{couchdb_port}:5984"
+        d.run 'hyperledger/fabric-couchdb', args: "-e COUCHDB_PASSWORD=password -e COUCHDB_USER=admin -p #{couchdb_port}:5984"
         # Pre-load fabric image for chaincode instantiation
         #d.pull_images "hyperledger/fabric-ccenv:x86_64-#{HYPERLEDGER_VERSION}"
         d.pull_images "hyperledger/fabric-ccenv:#{HYPERLEDGER_VERSION}"
